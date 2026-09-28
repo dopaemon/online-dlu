@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'cache.dart';
 import 'graph.dart';
+import 'nhac.dart';
 import 'portal.dart';
 
 /// Nạp sẵn mọi thứ vào máy ngay khi mở app, để mất mạng vẫn mở được và các
@@ -47,13 +48,21 @@ class Prefetch {
       // Tháng này, tháng sau, rồi tháng trước: đúng ba tháng mà màn Lịch
       // đụng tới ngay khi mở. Thiếu tháng trước là chip "dữ liệu lúc..."
       // bị ghim vào mốc cũ của nó dù mọi thứ khác vừa lấy mới xong.
+      final ngay = <DateTime, List<dynamic>>{};
       for (final m in [
         DateTime(now.year, now.month),
         DateTime(now.year, now.month + 1),
         DateTime(now.year, now.month - 1),
       ]) {
-        await _thu(() => fetchMonth(p, token, m));
+        final d = await _thu(() => fetchMonth(p, token, m));
+        if (d == null) continue;
+        ngay.addAll({
+          for (final e in d.entries) DateTime(m.year, m.month, e.key): e.value,
+        });
       }
+      // Có lịch mới thì hẹn lại máy rung trước giờ vào lớp. Tháng trước nằm
+      // trong đống này nhưng toàn ngày đã qua nên tự bị bỏ.
+      await Nhac.datLai(ngay);
       xongLuc = DateTime.now();
     } finally {
       _dangChay = false;

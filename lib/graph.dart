@@ -947,9 +947,10 @@ class _TodayLessonsState extends State<TodayLessons>
   @override
   Future<void> reload() => _load(DateTime.now(), lai: true);
 
-  /// Lịch nguyên tháng chứ không riêng hôm nay: 0h00 qua ngày mới là hiện
-  /// luôn tiết hôm sau, không phải hỏi lại portal.
-  Map<int, List<dynamic>>? _days;
+  /// Lịch theo ngày tuyệt đối, gồm tháng này và tháng sau. Nạp sẵn cả khối
+  /// nên 0h00 qua ngày mới là hiện luôn tiết hôm sau, và ngày cuối tháng
+  /// vẫn xem trước được ngày mai — không phải hỏi lại portal lần nào.
+  Map<DateTime, List<dynamic>>? _ngay;
   DateTime? _thang;
   bool _dangTai = false;
 
@@ -963,23 +964,40 @@ class _TodayLessonsState extends State<TodayLessons>
     final thang = DateTime(now.year, now.month);
     if (_dangTai || (!lai && _thang == thang)) return;
     _dangTai = true;
+    final p = widget.portal ?? Portal();
     try {
-      final days = await fetchMonth(
-        widget.portal ?? Portal(),
-        widget.session.token,
-        thang,
-      );
+      final ngay = await _theoNgay(p, thang);
+      // Tháng sau nữa: ngày cuối tháng thì "Ngày mai" nằm bên đó. Prefetch
+      // đã kéo sẵn ba tháng vào cache nên lượt này thường không đụng portal.
+      try {
+        ngay.addAll(await _theoNgay(p, DateTime(thang.year, thang.month + 1)));
+      } on PortalError {
+        // Thiếu tháng sau thì chỉ mất mục xem trước, hôm nay vẫn hiện.
+      }
       if (mounted) {
         setState(() {
-          _days = days;
+          _ngay = ngay;
           _thang = thang;
         });
       }
     } on PortalError {
-      if (mounted) setState(() => _days ??= const {});
+      if (mounted) setState(() => _ngay ??= const {});
     } finally {
       _dangTai = false;
     }
+  }
+
+  /// Lịch một tháng, đổi khoá từ ngày-trong-tháng sang ngày tuyệt đối để
+  /// nhiều tháng gộp chung một map mà không đụng khoá nhau.
+  Future<Map<DateTime, List<dynamic>>> _theoNgay(
+    Portal p,
+    DateTime thang,
+  ) async {
+    final d = await fetchMonth(p, widget.session.token, thang);
+    return {
+      for (final e in d.entries)
+        DateTime(thang.year, thang.month, e.key): e.value,
+    };
   }
 
   @override
@@ -990,21 +1008,19 @@ class _TodayLessonsState extends State<TodayLessons>
       if (_thang != null && _thang != DateTime(now.year, now.month)) {
         scheduleMicrotask(() => _load(now));
       }
-      if (_days == null) {
+      if (_ngay == null) {
         return const Padding(
           padding: EdgeInsets.only(bottom: 20),
           child: Skeleton(height: 120, radius: 16, ink: true),
         );
       }
-      final items = _days![now.day] ?? const [];
+      final homNay = DateTime(now.year, now.month, now.day);
+      final items = _ngay![homNay] ?? const [];
       final ke = tietKe(items, now);
       // Hôm nay tan hết (hay hôm nay nghỉ) thì nhìn trước ngày mai luôn. Qua
-      // 0h00 là now.day nhích lên, mục "Ngày mai" tự thành "Hôm nay".
-      // ponytail: ngày cuối tháng thì lịch mai nằm ở tháng chưa nạp nên bỏ
-      // qua; cần thì nạp thêm tháng sau trong _load.
-      final mai = now.add(const Duration(days: 1));
-      final maiItems = ke == null && mai.month == now.month
-          ? (_days![mai.day] ?? const [])
+      // 0h00 là homNay nhích lên, mục "Ngày mai" tự thành "Hôm nay".
+      final maiItems = ke == null
+          ? (_ngay![homNay.add(const Duration(days: 1))] ?? const [])
           : const [];
       if (items.isEmpty && maiItems.isEmpty) return const SizedBox.shrink();
       return Padding(

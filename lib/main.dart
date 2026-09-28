@@ -648,7 +648,24 @@ class _Menu extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) => PaperBox(
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'Menu',
+        style: TextStyle(
+          fontFamily: 'Baloo',
+          fontWeight: FontWeight.w800,
+          fontSize: 22,
+          color: Paper.ink,
+        ),
+      ),
+      const SizedBox(height: 10),
+      _khung(context),
+    ],
+  );
+
+  Widget _khung(BuildContext context) => PaperBox(
     child: Column(
       children: [
         for (final (tab, icon, label, color) in _items)

@@ -20,6 +20,9 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // flutter_local_notifications xài java.time, mà app còn đỡ tới
+        // Android 7 nên phải desugar cho các máy cũ.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     signingConfigs {
@@ -68,4 +71,8 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

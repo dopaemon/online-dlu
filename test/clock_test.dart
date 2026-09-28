@@ -63,7 +63,13 @@ void main() {
     );
 
     // Nạp trước ngoài zone của test để cache Hive ghi xong hẳn.
-    await t.runAsync(() => fetchMonth(portal, 't', DateTime(2026, 9)));
+    await t.runAsync(() async {
+      // Hâm sẵn cả tháng sau: TodayLessons nạp hai tháng, mà ghi cache Hive
+      // thật thì không chạy xong dưới đồng hồ giả của testWidgets.
+      for (final m in [DateTime(2026, 9), DateTime(2026, 10)]) {
+        await fetchMonth(portal, 't', m);
+      }
+    });
 
     // Mở app lúc 23:59 của một ngày nghỉ: chưa có gì để hiện. Tắt hẹn nhịp
     // để test tự tua giờ, và để không còn Timer treo lúc kết thúc.
@@ -141,7 +147,13 @@ void main() {
         );
       }),
     );
-    await t.runAsync(() => fetchMonth(portal, 't', DateTime(2026, 9)));
+    await t.runAsync(() async {
+      // Hâm sẵn cả tháng sau: TodayLessons nạp hai tháng, mà ghi cache Hive
+      // thật thì không chạy xong dưới đồng hồ giả của testWidgets.
+      for (final m in [DateTime(2026, 9), DateTime(2026, 10)]) {
+        await fetchMonth(portal, 't', m);
+      }
+    });
 
     // 9h00 ngày 28: đang học tiết 2, chưa tan nên chưa nhắc ngày mai.
     Clock.instance.set(DateTime(2026, 9, 28, 9));
