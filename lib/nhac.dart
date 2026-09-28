@@ -51,7 +51,9 @@ List<MocNhac> mocNhac(
 class Nhac {
   static const truoc = Duration(minutes: 15);
   static const _khoa = 'nhac_truoc_gio';
-  static const _kenh = 'sap_vao_lop';
+  // Đổi id kênh vì Android khoá cấu hình kênh ngay lần tạo đầu: kênh cũ đã
+  // đăng ký có tiếng thì sửa code cũng vô ích, phải là kênh mới.
+  static const _kenh = 'sap_vao_lop_im';
 
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _sanSang = false;
@@ -150,8 +152,11 @@ class Nhac {
           channelDescription: 'Nhắc trước 15 phút khi tới giờ lên lớp',
           importance: Importance.high,
           priority: Priority.high,
+          // Im tiếng, chỉ rung: nhắc trong giờ học hay giờ ngủ đều không nên
+          // kêu lên.
+          playSound: false,
         ),
-        iOS: DarwinNotificationDetails(),
+        iOS: DarwinNotificationDetails(presentSound: false),
       ),
       androidScheduleMode: che,
     );
